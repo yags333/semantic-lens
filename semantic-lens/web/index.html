@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SemanticLens - Offline Local AI Media Search</title>
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --surface-dark: #0f172a;
+      --card-dark: #1e293b;
+      --border-dark: #334155;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background: radial-gradient(circle at 50% 10%, #1e293b 0%, #090d16 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justifyContent: center;
+      padding: 20px;
+    }
+    .header-banner {
+      text-align: center;
+      margin-bottom: 24px;
+      max-width: 600px;
+    }
+    .header-banner h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .header-banner p {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .badge-privacy {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 12px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Smartphone Frame */
+    .phone-chassis {
+      width: 410px;
+      height: 840px;
+      background: #020617;
+      border: 12px solid #1e293b;
+      border-radius: 46px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    /* Dynamic Island / Speaker Notch */
+    .phone-notch {
+      width: 120px;
+      height: 24px;
+      background: #000000;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: 14px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 12px;
+    }
+    .phone-notch-lens {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #111827;
+      border: 1.5px solid #1e293b;
+    }
+    .phone-status-bar {
+      height: 44px;
+      padding: 12px 24px 0 24px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      z-index: 40;
+    }
+
+    /* App Layout Inside Phone */
+    .app-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    .screen-view {
+      flex: 1;
+      overflow-y: auto;
+      display: none;
+      flex-direction: column;
+    }
+    .screen-view.active {
+      display: flex;
+    }
+
+    /* Search Header */
+    .search-header {
+      padding: 10px 16px 8px 16px;
+      background: var(--surface-dark);
+      border-bottom: 1px solid var(--border-dark);
+    }
+    .brand-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .brand-tag {
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .filter-btn-trigger {
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .filter-btn-trigger:hover {
+      border-color: var(--accent);
+    }
+    .filter-count-badge {
+      background: var(--accent);
+      color: #000;
+      font-size: 10px;
+      font-weight: 800;
+      border-radius: 8px;
+      padding: 1px 5px;
+      margin-left: 4px;
+    }
+
+    .search-box-wrap {
+      position: relative;
+      margin-bottom: 8px;
+    }
+    .search-input {
+      width: 100%;
+      height: 42px;
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 12px;
+      padding: 0 40px 0 38px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .search-icon-left {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      font-size: 16px;
+      opacity: 0.7;
+    }
+    .search-clear-btn {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      display: none;
+    }
+
+    .chips-carousel {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 0 8px 0;
+      scrollbar-width: none;
+    }
+    .chips-carousel::-webkit-scrollbar {
+      display: none;
+    }
+    .chip-item {
+      white-space: nowrap;
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      color: var(--text-muted);
+      padding: 5px 12px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chip-item:hover, .chip-item.active {
+      background: var(--primary);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .latency-bar {
+      background: #0b1120;
+      padding: 6px 16px;
+      border-bottom: 1px solid var(--border-dark);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .latency-val {
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .privacy-local-badge {
+      color: var(--success);
+      font-weight: 700;
+      font-size: 10px;
+    }
+
+    /* Grid Layout */
+    .grid-container {
+      padding: 14px 12px 60px 12px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .media-card {
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+      position: relative;
+    }
+    .media-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+    .media-thumb-box {
+      width: 100%;
+      height: 120px;
+      background: #020617;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .media-thumb-box svg {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .badge-ext {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    .badge-score {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #fff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+    .score-high {
+      background: #10b981;
+    }
+    .score-med {
+      background: #f59e0b;
+    }
+    .score-low {
+      background: #64748b;
+    }
+    .card-meta {
+      padding: 8px 10px;
+    }
+    .card-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .card-sub {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Detail Modal View */
+    .detail-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--surface-dark);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .detail-overlay.active {
+      display: flex;
+    }
+    .detail-header {
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-dark);
+      background: var(--surface-dark);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .btn-back {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .detail-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      max-width: 240px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .detail-hero-img {
+      width: 100%;
+      height: 240px;
+      background: #020617;
+    }
+    .detail-hero-img svg {
+      width: 100%;
+      height: 100%;
+    }
+    .detail-body {
+      padding: 16px;
+      padding-bottom: 60px;
+    }
+    .detail-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin: 16px 0 8px 0;
+    }
+    .exif-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .exif-cell {
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .exif-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .exif-val {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 2px;
+    }
+    .vector-box {
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 12px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 10px;
+      color: var(--accent);
+      line-height: 15px;
+      word-break: break-all;
+    }
+
+    /* Similar Photos Carousel */
+    .similar-row {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 6px 0;
+      scrollbar-width: none;
+    }
+    .similar-row::-webkit-scrollbar {
+      display: none;
+    }
+    .similar-card {
+      min-width: 110px;
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .similar-thumb {
+      width: 100%;
+      height: 75px;
+      position: relative;
+    }
+    .similar-thumb svg {
+      width: 100%;
+      height: 100%;
+    }
+    .similar-badge {
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      background: rgba(16, 185, 129, 0.9);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 6px;
+    }
+    .similar-name {
+      padding: 5px;
+      font-size: 10px;
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Bottom Tab Navigation */
+    .bottom-tab-bar {
+      height: 58px;
+      background: var(--surface-dark);
+      border-top: 1px solid var(--border-dark);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 30;
+    }
+    .tab-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 6px;
+      width: 33%;
+      transition: color 0.2s;
+    }
+    .tab-btn span {
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
+    .tab-btn.active {
+      color: var(--accent);
+    }
+
+    /* Filter Modal */
+    .modal-sheet {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card-dark);
+      border-top: 1px solid var(--border-dark);
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      padding: 20px;
+      z-index: 120;
+      display: none;
+      flex-direction: column;
+      box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
+      max-height: 80%;
+      overflow-y: auto;
+    }
+    .modal-sheet.active {
+      display: flex;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .btn-close-modal {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .filter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .filter-pill {
+      background: var(--surface-dark);
+      border: 1px solid var(--border-dark);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .filter-pill.active {
+      background: var(--primary);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Indexing Dashboard Screen */
+    .indexing-screen {
+      padding: 16px;
+      padding-bottom: 60px;
+    }
+    .stat-card {
+      background: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      background: #020617;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 10px 0 6px 0;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 100%;
+      transition: width 0.3s;
+    }
+    .btn-action-primary {
+      background: var(--primary);
+      border: none;
+      color: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      width: 100%;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .btn-action-primary:hover {
+      background: var(--primary-hover);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-banner">
+    <h1>SemanticLens Mobile Emulator</h1>
+    <p>100% On-Device Semantic Image Search &amp; SQLite Vector Indexing</p>
+    <div class="badge-privacy">🔒 Offline • No Cloud Uploads • Private Embeddings</div>
+  </div>
+
+  <!-- Mobile Frame Chassis -->
+  <div class="phone-chassis">
+    <!-- Notch / Dynamic Island -->
+    <div class="phone-notch">
+      <div class="phone-notch-lens"></div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="phone-status-bar">
+      <span>9:41</span>
+      <span>5G 📶 100% 🔋</span>
+    </div>
+
+    <!-- App Screen Area -->
+    <div class="app-screen">
+
+      <!-- SCREEN 1: SEARCH -->
+      <div id="screen-search" class="screen-view active">
+        <div class="search-header">
+          <div class="brand-row">
+            <div>
+              <div class="brand-title">SemanticLens</div>
+              <div class="brand-tag">On-Device Local AI</div>
+            </div>
+            <button class="filter-btn-trigger" onclick="toggleFilterModal(true)">
+              ⚙️ Filter <span id="filter-badge" class="filter-count-badge" style="display:none;">0</span>
+            </button>
+          </div>
+
+          <div class="search-box-wrap">
+            <span class="search-icon-left">🔍</span>
+            <input
+              type="text"
+              id="search-input"
+              class="search-input"
+              placeholder="Describe e.g. 'warrior with sword'..."
+              oninput="handleSearchInput(this.value)"
+            />
+            <button id="search-clear" class="search-clear-btn" onclick="clearSearch()">✕</button>
+          </div>
+
+          <div class="chips-carousel">
+            <div class="chip-item" onclick="triggerQuery('a warrior with a sword')">⚔️ warrior with sword</div>
+            <div class="chip-item" onclick="triggerQuery('dog running on grass')">🐕 dog on grass</div>
+            <div class="chip-item" onclick="triggerQuery('sunset over mountains')">🌄 mountain sunset</div>
+            <div class="chip-item" onclick="triggerQuery('birthday cake with candles')">🎂 birthday cake</div>
+            <div class="chip-item" onclick="triggerQuery('red sports car')">🏎️ red sports car</div>
+            <div class="chip-item" onclick="triggerQuery('coffee mug and book')">☕ coffee &amp; book</div>
+            <div class="chip-item" onclick="triggerQuery('cyberpunk neon city')">🏙️ cyberpunk neon</div>
+            <div class="chip-item" onclick="triggerQuery('sleeping cat in sunlight')">🐈 sleeping cat</div>
+            <div class="chip-item" onclick="triggerQuery('snowy alpine peaks')">❄️ snowy peaks</div>
+            <div class="chip-item" onclick="triggerQuery('cozy winter cabin')">🏡 cozy cabin</div>
+          </div>
+        </div>
+
+        <div class="latency-bar">
+          <span id="latency-stats">Indexed <span class="latency-val">10</span> photos in vector store</span>
+          <span class="privacy-local-badge">⚡ Sub-millisecond Cosine Matching</span>
+        </div>
+
+        <div id="search-grid" class="grid-container">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- SCREEN 2: GALLERY -->
+      <div id="screen-gallery" class="screen-view">
+        <div class="search-header">
+          <div class="brand-row">
+            <div>
+              <div class="brand-title">Local Media Gallery</div>
+              <div class="brand-tag">All Indexed Photos</div>
+            </div>
+            <button class="filter-btn-trigger" onclick="toggleFilterModal(true)">
+              ⚙️ Filter
+            </button>
+          </div>
+        </div>
+        <div id="gallery-grid" class="grid-container">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- SCREEN 3: STORAGE & AI INDEXING -->
+      <div id="screen-indexing" class="screen-view indexing-screen">
+        <h2 style="font-size: 18px; margin-bottom: 4px;">Storage &amp; AI Engine</h2>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px;">
+          Local vector embeddings &amp; photo library permissions
+        </p>
+
+        <div class="stat-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:13px; font-weight:700;">Storage Permission</span>
+            <span style="background:rgba(16,185,129,0.2); color:#34d399; font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px;">GRANTED</span>
+          </div>
+          <p style="font-size:11px; color:var(--text-muted);">
+            Android 13+ READ_MEDIA_IMAGES / iOS PHPhotoLibrary. Only local read access is requested.
+          </p>
+        </div>
+
+        <div class="stat-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; font-weight:700;">Background Vectorizer</span>
+            <span style="background:rgba(56,189,248,0.2); color:#38bdf8; font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px;">READY</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar-fill" style="width: 100%;"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-bottom:8px;">
+            <span>10 of 10 media assets vectorized</span>
+            <span>100%</span>
+          </div>
+          <p style="font-size:10px; color:var(--text-muted); margin-bottom:8px;">
+            🔋 Battery Saver: Pauses under 15% battery. 80ms thermal pause between batches.
+          </p>
+          <button class="btn-action-primary" onclick="simulateScan()">Scan Local Device for New Photos</button>
+        </div>
+
+        <div class="stat-card">
+          <span style="font-size:13px; font-weight:700;">SQLite Vector Store</span>
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-top:10px;">
+            <div style="background:#020617; padding:8px; border-radius:8px; text-align:center;">
+              <div style="font-size:8px; color:var(--text-muted);">TOTAL VECTORS</div>
+              <div style="font-size:16px; font-weight:800; color:var(--accent);">10</div>
+            </div>
+            <div style="background:#020617; padding:8px; border-radius:8px; text-align:center;">
+              <div style="font-size:8px; color:var(--text-muted);">DIMENSION</div>
+              <div style="font-size:16px; font-weight:800; color:var(--accent);">512</div>
+            </div>
+            <div style="background:#020617; padding:8px; border-radius:8px; text-align:center;">
+              <div style="font-size:8px; color:var(--text-muted);">INDEX SIZE</div>
+              <div style="font-size:16px; font-weight:800; color:var(--accent);">24 KB</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMAGE DETAIL OVERLAY -->
+      <div id="detail-overlay" class="detail-overlay">
+        <div class="detail-header">
+          <button class="btn-back" onclick="closeDetail()">‹ Back</button>
+          <div id="detail-title" class="detail-title">Photo Details</div>
+          <div style="width: 40px;"></div>
+        </div>
+        <div id="detail-hero" class="detail-hero-img"></div>
+        <div class="detail-body">
+          <div id="detail-filename" style="font-size:16px; font-weight:800; margin-bottom:2px;"></div>
+          <div id="detail-filepath" style="font-size:11px; color:var(--text-muted); margin-bottom:12px;"></div>
+          
+          <div class="detail-section-title">EXIF &amp; Camera Information</div>
+          <div id="detail-exif" class="exif-grid"></div>
+
+          <div class="detail-section-title">On-Device 512-Dim Vector Embedding</div>
+          <div id="detail-vector" class="vector-box"></div>
+
+          <div class="detail-section-title">Visually &amp; Semantically Similar Photos</div>
+          <p style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Calculated using cosine similarity against local vector index:</p>
+          <div id="detail-similar-row" class="similar-row"></div>
+        </div>
+      </div>
+
+      <!-- FILTER MODAL SHEET -->
+      <div id="filter-modal" class="modal-sheet">
+        <div class="modal-header">
+          <h3>Filter &amp; Sort Media</h3>
+          <button class="btn-close-modal" onclick="toggleFilterModal(false)">✕</button>
+        </div>
+        <div style="font-size:12px; font-weight:700; margin-bottom:6px;">File Extensions</div>
+        <div class="filter-pills" id="ext-pills">
+          <div class="filter-pill" data-ext="jpg" onclick="togglePill(this)">.JPG</div>
+          <div class="filter-pill" data-ext="png" onclick="togglePill(this)">.PNG</div>
+          <div class="filter-pill" data-ext="heic" onclick="togglePill(this)">.HEIC</div>
+          <div class="filter-pill" data-ext="webp" onclick="togglePill(this)">.WEBP</div>
+        </div>
+
+        <div style="font-size:12px; font-weight:700; margin-bottom:6px;">Capture Date</div>
+        <div class="filter-pills" id="date-pills">
+          <div class="filter-pill active" data-days="all" onclick="selectSinglePill(this, 'date-pills')">All Time</div>
+          <div class="filter-pill" data-days="7" onclick="selectSinglePill(this, 'date-pills')">Past 7 Days</div>
+          <div class="filter-pill" data-days="30" onclick="selectSinglePill(this, 'date-pills')">Past 30 Days</div>
+        </div>
+
+        <div style="font-size:12px; font-weight:700; margin-bottom:6px;">Sort By</div>
+        <div class="filter-pills" id="sort-pills">
+          <div class="filter-pill active" data-sort="relevance" onclick="selectSinglePill(this, 'sort-pills')">Relevance</div>
+          <div class="filter-pill" data-sort="date_desc" onclick="selectSinglePill(this, 'sort-pills')">Newest First</div>
+          <div class="filter-pill" data-sort="size_desc" onclick="selectSinglePill(this, 'sort-pills')">File Size</div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:14px;">
+          <button style="flex:1; background:#020617; border:1px solid var(--border-dark); color:var(--text-muted); padding:10px; border-radius:10px; font-weight:600; cursor:pointer;" onclick="resetFilters()">Reset</button>
+          <button class="btn-action-primary" style="flex:2; margin-top:0;" onclick="applyFilters()">Apply Filters</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <div class="bottom-tab-bar">
+      <button class="tab-btn active" id="tab-btn-search" onclick="switchTab('search')">
+        <span>🔍</span>Search
+      </button>
+      <button class="tab-btn" id="tab-btn-gallery" onclick="switchTab('gallery')">
+        <span>🖼️</span>Gallery
+      </button>
+      <button class="tab-btn" id="tab-btn-indexing" onclick="switchTab('indexing')">
+        <span>⚡</span>Storage &amp; AI
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // --- Vector Math & Semantic Seed Dataset ---
+    const DIM = 512;
+    const STOPWORDS = new Set(['a', 'an', 'the', 'in', 'on', 'at', 'with', 'by', 'of', 'and', 'or', 'to', 'for', 'from']);
+
+    const ANCHORS = [
+      { keywords: ['warrior', 'sword', 'blade', 'armor', 'shield', 'fighter', 'battle', 'knight'], indices: [12, 45, 98, 150, 210, 312, 405], weights: [1.8, 1.5, 1.2, 1.4, 1.6, 1.3, 1.5] },
+      { keywords: ['dog', 'puppy', 'canine', 'golden', 'retriever', 'grass', 'lawn', 'field', 'running', 'park'], indices: [23, 67, 112, 178, 245, 330, 420], weights: [1.7, 1.6, 1.4, 1.5, 1.3, 1.4, 1.8] },
+      { keywords: ['mountain', 'mountains', 'peak', 'alps', 'snow', 'snowy', 'sunset', 'sunrise', 'golden hour', 'range'], indices: [34, 88, 142, 195, 260, 350, 440], weights: [1.6, 1.8, 1.5, 1.7, 1.4, 1.5, 1.6] },
+      { keywords: ['cake', 'birthday', 'celebration', 'candles', 'dessert', 'frosting', 'sweet', 'chocolate'], indices: [42, 91, 155, 215, 280, 370, 460], weights: [1.9, 1.7, 1.6, 1.5, 1.4, 1.8, 1.3] },
+      { keywords: ['car', 'sports', 'vehicle', 'automobile', 'racing', 'red', 'highway', 'speed', 'supercar'], indices: [56, 105, 168, 230, 295, 385, 475], weights: [1.8, 1.6, 1.7, 1.4, 1.5, 1.6, 1.4] },
+      { keywords: ['coffee', 'cup', 'mug', 'book', 'reading', 'wooden', 'table', 'rustic', 'tea'], indices: [63, 120, 182, 248, 310, 400, 488], weights: [1.7, 1.5, 1.8, 1.4, 1.6, 1.3, 1.5] },
+      { keywords: ['city', 'cityscape', 'cyberpunk', 'neon', 'lights', 'night', 'futuristic', 'tokyo'], indices: [75, 134, 198, 262, 325, 415, 502], weights: [1.8, 1.9, 1.6, 1.7, 1.5, 1.4, 1.6] },
+      { keywords: ['cat', 'kitten', 'sleeping', 'couch', 'sunlight', 'pet', 'animal', 'feline'], indices: [82, 147, 208, 275, 340, 430, 495], weights: [1.8, 1.6, 1.7, 1.5, 1.6, 1.4, 1.5] },
+      { keywords: ['snow', 'snowy', 'alps', 'mountain', 'peaks', 'winter', 'frost', 'pine'], indices: [34, 142, 220, 260, 350, 440, 490], weights: [1.7, 1.6, 1.5, 1.8, 1.4, 1.6, 1.7] },
+      { keywords: ['cabin', 'cozy', 'winter', 'forest', 'fireplace', 'woods', 'timber', 'snowfall'], indices: [90, 160, 222, 288, 355, 445, 508], weights: [1.7, 1.5, 1.6, 1.8, 1.4, 1.5, 1.6] }
+    ];
+
+    function normalizeVector(v) {
+      let sum = 0;
+      for (let i = 0; i < v.length; i++) sum += v[i] * v[i];
+      const norm = Math.sqrt(sum);
+      if (norm === 0) return v;
+      for (let i = 0; i < v.length; i++) v[i] /= norm;
+      return v;
+    }
+
+    function dotProduct(a, b) {
+      let sum = 0;
+      for (let i = 0; i < a.length; i++) sum += a[i] * b[i];
+      return sum;
+    }
+
+    function generateEmbedding(text) {
+      const vec = new Float32Array(DIM);
+      const words = text.toLowerCase().split(/[\s,.-]+/).filter(w => w.length > 0 && !STOPWORDS.has(w));
+
+      for (const anchor of ANCHORS) {
+        let matchCount = 0;
+        for (const w of words) {
+          if (anchor.keywords.some(k => k === w || (w.length >= 3 && k.includes(w)) || (k.length >= 3 && w.includes(k)))) {
+            matchCount++;
+          }
+        }
+        if (matchCount > 0) {
+          for (let i = 0; i < anchor.indices.length; i++) {
+            const idx = anchor.indices[i];
+            const w = anchor.weights[i] * (1.0 + Math.min(matchCount, 3) * 0.5);
+            vec[idx] += w;
+            if (idx > 0) vec[idx - 1] += w * 0.45;
+            if (idx < DIM - 1) vec[idx + 1] += w * 0.45;
+          }
+        }
+      }
+      return normalizeVector(vec);
+    }
+
+    // Curated Seed Gallery
+    const GALLERY = [
+      {
+        id: '1',
+        fileName: 'ancient_warrior_blade.jpg',
+        ext: 'jpg',
+        size: '3.4 MB',
+        dateDays: 2,
+        desc: 'heroic warrior forged steel broadsword battle armor knight',
+        exif: { Camera: 'Sony ILCE-7RM5', Lens: '50mm f/2.8', ISO: '200', Shutter: '1/500s', Res: '3840 × 2160' },
+        svg: `<svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#1e293b"/><circle cx="200" cy="110" r="35" fill="#94a3b8"/><polygon points="200,40 205,180 195,180" fill="#e2e8f0"/><rect x="180" y="180" width="40" height="8" fill="#d97706"/><rect x="196" y="188" width="8" height="30" fill="#78350f"/><polygon points="160,170 240,170 250,280 150,280" fill="#475569"/><text x="200" y="290" fill="#94a3b8" font-size="14" text-anchor="middle" font-weight="bold">Ancient Warrior with Sword</text></svg>`
+      },
+      {
+        id: '2',
+        fileName: 'golden_retriever_grass.png',
+        ext: 'png',
+        size: '4.1 MB',
+        dateDays: 5,
+        desc: 'happy golden retriever dog puppy running lawn grass green park',
+        exif: { Camera: 'Apple iPhone 15 Pro', Lens: '24mm f/1.78', ISO: '80', Shutter: '1/1250s', Res: '4032 × 3024' },
+        svg: `<svg viewBox="0 0 400 300"><rect width="400" height="180" fill="#38bdf8"/><rect y="180" width="400" height="120" fill="#22c55e"/><circle cx="340" cy="60" r="25" fill="#fef08a"/><ellipse cx="190" cy="170" rx="60" ry="32" fill="#f59e0b"/><circle cx="245" cy="140" r="28" fill="#fbbf24"/><ellipse cx="265" cy="145" rx="6" ry="4" fill="#1e293b"/><text x="200" y="285" fill="#14532d" font-size="14" text-anchor="middle" font-weight="bold">Dog Running on Grass</text></svg>`
+      },
+      {
+        id: '3',
+        fileName: 'alpine_sunset_mountains.heic',
+        ext: 'heic',
+        size: '2.2 MB',
+        dateDays: 12,
+        desc: 'alpine mountain peak sunset range golden hour snow orange sky',
+        exif: { Camera: 'Fujifilm X-T5', Lens: '35mm f/8.0', ISO: '160', Shutter: '1/60s', Res: '5464 × 3640' },
+        svg: `<svg viewBox="0 0 400 300"><defs><linearGradient id="g3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#581c87"/><stop offset="50%" stop-color="#ea580c"/><stop offset="100%" stop-color="#fbbf24"/></linearGradient></defs><rect width="400" height="300" fill="url(#g3)"/><polygon points="30,260 140,110 250,260" fill="#1e1b4b"/><polygon points="140,110 170,150 140,160 110,150" fill="#fff" opacity="0.8"/><polygon points="160,290 280,80 400,290" fill="#0f172a"/><text x="200" y="285" fill="#fde047" font-size="14" text-anchor="middle" font-weight="bold">Mountain Sunset Alpine Range</text></svg>`
+      },
+      {
+        id: '4',
+        fileName: 'chocolate_birthday_cake.jpg',
+        ext: 'jpg',
+        size: '2.9 MB',
+        dateDays: 1,
+        desc: 'chocolate birthday cake celebration candles dessert frosting party',
+        exif: { Camera: 'Canon EOS R6 Mark II', Lens: '85mm f/2.0', ISO: '400', Shutter: '1/160s', Res: '3000 × 3000' },
+        svg: `<svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#1c1917"/><rect x="120" y="160" width="160" height="80" rx="8" fill="#451a03"/><ellipse cx="200" cy="160" rx="80" ry="20" fill="#78350f"/><rect x="196" y="110" width="8" height="45" fill="#38bdf8"/><path d="M200,95 Q208,105 200,110 Q192,105 200,95 Z" fill="#f59e0b"/><text x="200" y="280" fill="#fde047" font-size="14" text-anchor="middle" font-weight="bold">Birthday Cake with Candles</text></svg>`
+      },
+      {
+        id: '5',
+        fileName: 'red_sports_supercar.webp',
+        ext: 'webp',
+        size: '1.8 MB',
+        dateDays: 18,
+        desc: 'red sports car vehicle highway speed racing supercar automobile',
+        exif: { Camera: 'Nikon Z8', Lens: '70mm f/4.0', ISO: '100', Shutter: '1/2000s', Res: '3840 × 2160' },
+        svg: `<svg viewBox="0 0 400 300"><rect width="400" height="180" fill="#0f172a"/><rect y="180" width="400" height="120" fill="#334155"/><path d="M80,200 L120,160 L230,150 L310,175 L350,200 Z" fill="#dc2626"/><circle cx="130" cy="215" r="22" fill="#0f172a"/><circle cx="300" cy="215" r="22" fill="#0f172a"/><text x="200" y="275" fill="#fca5a5" font-size="14" text-anchor="middle" font-weight="bold">Red Sports Car on Highway</text></svg>`
+      },
+      {
+        id: '6',
+        fileName: 'rustic_coffee_book.jpg',
+        ext: 'jpg',
+        size: '3.1 MB',
+        dateDays: 3,
+        desc: 'hot coffee mug cup open book reading rustic wooden table tea',
+        exif: { Camera: 'Leica Q3', Lens: '28mm f/1.7', ISO: '320', Shutter: '1/125s', Res: '3200 × 2400' },
+        svg: `<svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#78350f"/><polygon points="80,220 180,235 180,140 80,125" fill="#fef3c7"/><polygon points="180,235 280,220 280,125 180,140" fill="#fde68a"/><ellipse cx="320" cy="180" rx="30" ry="20" fill="#fff"/><ellipse cx="320" cy="177" rx="24" ry="14" fill="#451a03"/><text x="200" y="280" fill="#fef3c7" font-size="14" text-anchor="middle" font-weight="bold">Coffee Mug with Open Book</text></svg>`
+      },
+      {
+        id: '7',
+        fileName: 'snowy_mountain_peaks.png',
+        ext: 'png',
+        size: '4.5 MB',
+        dateDays: 30,
+        desc: 'snowy alpine mountain peaks winter pine frost cold sky',
+        exif: { Camera: 'Sony ILCE-7M4', Lens: '70mm f/5.6', ISO: '100', Shutter: '1/800s', Res: '4000 × 3000' },
+        svg: `<svg viewBox="0 0 400 300"><rect width="400" height="180" fill="#0284c7"/><polygon points="40,230 150,80 270,230" fill="#e0f2fe"/><polygon points="150,80 180,120 150,135 120,120" fill="#fff"/><rect y="220" width="400" height="80" fill="#0f172a"/><polygon points="80,220 95,180 110,220" fill="#14532d"/><polygon points="200,220 215,175 230,220" fill="#166534"/><text x="200" y="280" fill="#e0f2fe" font-size="14" text-anchor="middle" font-weight="bold">Snowy Alpine Peaks & Pines</text></svg>`
+      },
+      {
+        id: '8',
+        fileName: 'cyberpunk_neon_city.webp',
+        ext: 'webp',
+        size: '2.2 MB',
+        dateDays: 8,
+        desc: 'cyberpunk neon city cityscape futuristic night lights skyscrapers tokyo',
+        exif: { Camera: 'Fujifilm X100V', Lens: '23mm f/2.0', ISO: '1600', Shutter: '1/60s', Res: '3840 × 2160' },
+        svg: `<svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#09090b"/><rect x="40" y="90" width="60" height="210" fill="#18181b" stroke="#06b6d4" stroke-width="2"/><rect x="120" y="50" width="80" height="250" fill="#27272a" stroke="#ec4899" stroke-width="2"/><rect x="220" y="100" width="60" height="200" fill="#18181b" stroke="#a855f7" stroke-width="2"/><rect x="300" y="70" width="70" height="230" fill="#27272a" stroke="#f43f5e" stroke-width="2"/><text x="200" y="35" fill="#38bdf8" font-size="14" text-anchor="middle" font-weight="bold">CYBERPUNK NEON CITY</text></svg>`
+      },
+      {
+        id: '9',
+        fileName: 'cat_sunlight_nap.heic',
+        ext: 'heic',
+        size: '2.6 MB',
+        dateDays: 4,
+        desc: 'cute sleeping cat kitten couch sunlight pet animal nap feline',
+        exif: { Camera: 'Apple iPhone 15 Pro Max', Lens: '120mm f/2.8', ISO: '64', Shutter: '1/250s', Res: '4032 × 3024' },
+        svg: `<svg viewBox="0 0 400 300"><rect width="400" height="300" fill="#3f3f46"/><polygon points="70,0 180,0 260,300 150,300" fill="#fef08a" opacity="0.3"/><ellipse cx="190" cy="190" rx="45" ry="28" fill="#fb923c"/><circle cx="230" cy="180" r="20" fill="#f97316"/><text x="200" y="280" fill="#fed7aa" font-size="14" text-anchor="middle" font-weight="bold">Sleeping Cat in Sunlight</text></svg>`
+      },
+      {
+        id: '10',
+        fileName: 'cozy_winter_cabin.jpg',
+        ext: 'jpg',
+        size: '3.7 MB',
+        dateDays: 45,
+        desc: 'cozy rustic winter cabin forest fireplace woods snow timber',
+        exif: { Camera: 'Nikon Z7 II', Lens: '45mm f/4.5', ISO: '200', Shutter: '1/320s', Res: '4000 × 2667' },
+        svg: `<svg viewBox="0 0 400 300"><rect width="400" height="190" fill="#1e293b"/><rect y="190" width="400" height="110" fill="#f1f5f9"/><polygon points="140,130 200,70 260,130" fill="#451a03"/><rect x="150" y="130" width="100" height="70" fill="#78350f"/><rect x="165" y="145" width="25" height="25" fill="#fef08a"/><text x="200" y="280" fill="#334155" font-size="14" text-anchor="middle" font-weight="bold">Cozy Winter Cabin in Snow</text></svg>`
+      }
+    ];
+
+    // Compute embeddings for all items
+    GALLERY.forEach(item => {
+      item.embedding = generateEmbedding(item.desc);
+    });
+
+    // App State
+    let activeFilters = {
+      extensions: [],
+      days: 'all',
+      sort: 'relevance'
+    };
+
+    function renderGrid(containerId, items, isSearch = false) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column: span 2; text-align: center; padding: 40px 10px; color: var(--text-muted);">
+            <div style="font-size: 32px; margin-bottom: 8px;">🔍</div>
+            <div style="font-size: 14px; font-weight: 700; color: #fff;">No Matching Photos</div>
+            <div style="font-size: 11px; margin-top: 4px;">Try a different description or loosen filters.</div>
+          </div>
+        `;
+        return;
+      }
+
+      items.forEach(match => {
+        const item = isSearch ? match.item : match;
+        const score = isSearch ? Math.round(match.score * 100) : null;
+
+        let scoreClass = 'score-high';
+        if (score !== null && score < 60) scoreClass = 'score-med';
+        if (score !== null && score < 35) scoreClass = 'score-low';
+
+        const card = document.createElement('div');
+        card.className = 'media-card';
+        card.onclick = () => openDetail(item.id);
+
+        card.innerHTML = `
+          <div class="media-thumb-box">
+            ${item.svg}
+            <div class="badge-ext">${item.ext.toUpperCase()}</div>
+            ${score !== null ? `<div class="badge-score ${scoreClass}">${score}% Match</div>` : ''}
+          </div>
+          <div class="card-meta">
+            <div class="card-name">${item.fileName}</div>
+            <div class="card-sub">
+              <span>${item.dateDays}d ago</span>
+              <span>${item.size}</span>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function executeSearch(query) {
+      const t0 = performance.now();
+      let candidates = [...GALLERY];
+
+      // Apply Extension filter
+      if (activeFilters.extensions.length > 0) {
+        candidates = candidates.filter(item => activeFilters.extensions.includes(item.ext));
+      }
+
+      // Apply Date filter
+      if (activeFilters.days !== 'all') {
+        const maxDays = parseInt(activeFilters.days, 10);
+        candidates = candidates.filter(item => item.dateDays <= maxDays);
+      }
+
+      if (!query.trim()) {
+        document.getElementById('latency-stats').innerHTML = `Indexed <span class="latency-val">${candidates.length}</span> photos in vector store`;
+        renderGrid('search-grid', candidates, false);
+        return;
+      }
+
+      const qVec = generateEmbedding(query);
+      const scored = candidates.map(item => ({
+        item,
+        score: dotProduct(qVec, item.embedding)
+      })).filter(m => m.score >= 0.20);
+
+      // Sort
+      if (activeFilters.sort === 'relevance') {
+        scored.sort((a, b) => b.score - a.score);
+      } else if (activeFilters.sort === 'date_desc') {
+        scored.sort((a, b) => a.item.dateDays - b.item.dateDays);
+      } else if (activeFilters.sort === 'size_desc') {
+        scored.sort((a, b) => parseFloat(b.item.size) - parseFloat(a.item.size));
+      }
+
+      const elapsed = Math.round((performance.now() - t0) * 100) / 100;
+      document.getElementById('latency-stats').innerHTML = `Found <span class="latency-val">${scored.length}</span> matches in <span class="latency-val">${elapsed}ms</span>`;
+      renderGrid('search-grid', scored, true);
+    }
+
+    function handleSearchInput(val) {
+      document.getElementById('search-clear').style.display = val ? 'block' : 'none';
+      executeSearch(val);
+    }
+
+    function triggerQuery(text) {
+      const input = document.getElementById('search-input');
+      input.value = text;
+      handleSearchInput(text);
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('search-input');
+      input.value = '';
+      handleSearchInput('');
+    }
+
+    // Detail Screen Navigation
+    function openDetail(id) {
+      const item = GALLERY.find(g => g.id === id);
+      if (!item) return;
+
+      document.getElementById('detail-title').innerText = item.fileName;
+      document.getElementById('detail-filename').innerText = item.fileName;
+      document.getElementById('detail-filepath').innerText = `/storage/emulated/0/DCIM/Camera/${item.fileName}`;
+      document.getElementById('detail-hero').innerHTML = item.svg;
+
+      // EXIF Grid
+      const exifEl = document.getElementById('detail-exif');
+      exifEl.innerHTML = `
+        <div class="exif-cell"><div class="exif-label">Camera</div><div class="exif-val">${item.exif.Camera}</div></div>
+        <div class="exif-cell"><div class="exif-label">Lens / Aperture</div><div class="exif-val">${item.exif.Lens}</div></div>
+        <div class="exif-cell"><div class="exif-label">Exposure</div><div class="exif-val">${item.exif.Shutter}</div></div>
+        <div class="exif-cell"><div class="exif-label">ISO</div><div class="exif-val">${item.exif.ISO}</div></div>
+        <div class="exif-cell"><div class="exif-label">Resolution</div><div class="exif-val">${item.exif.Res}</div></div>
+        <div class="exif-cell"><div class="exif-label">Format / Size</div><div class="exif-val">${item.ext.toUpperCase()} • ${item.size}</div></div>
+      `;
+
+      // 512-dim Vector
+      const previewSlice = Array.from(item.embedding.slice(0, 10)).map(v => v.toFixed(4)).join(', ');
+      document.getElementById('detail-vector').innerText = `[${previewSlice}, ... 502 more float32 dimensions]`;
+
+      // Find visually similar
+      const similarRow = document.getElementById('detail-similar-row');
+      similarRow.innerHTML = '';
+      const similarList = GALLERY
+        .filter(g => g.id !== item.id)
+        .map(g => ({ item: g, score: dotProduct(item.embedding, g.embedding) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5);
+
+      similarList.forEach(sim => {
+        const simCard = document.createElement('div');
+        simCard.className = 'similar-card';
+        simCard.onclick = () => openDetail(sim.item.id);
+        simCard.innerHTML = `
+          <div class="similar-thumb">
+            ${sim.item.svg}
+            <div class="similar-badge">${Math.round(sim.score * 100)}%</div>
+          </div>
+          <div class="similar-name">${sim.item.fileName}</div>
+        `;
+        similarRow.appendChild(simCard);
+      });
+
+      document.getElementById('detail-overlay').classList.add('active');
+    }
+
+    function closeDetail() {
+      document.getElementById('detail-overlay').classList.remove('active');
+    }
+
+    // Tab Navigation
+    function switchTab(tab) {
+      document.querySelectorAll('.screen-view').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(`screen-${tab}`).classList.add('active');
+      document.getElementById(`tab-btn-${tab}`).classList.add('active');
+
+      if (tab === 'gallery') {
+        renderGrid('gallery-grid', GALLERY, false);
+      }
+    }
+
+    // Filter Controls
+    function toggleFilterModal(show) {
+      document.getElementById('filter-modal').classList.toggle('active', show);
+    }
+
+    function togglePill(el) {
+      el.classList.toggle('active');
+    }
+
+    function selectSinglePill(el, groupContainerId) {
+      document.querySelectorAll(`#${groupContainerId} .filter-pill`).forEach(p => p.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    function applyFilters() {
+      const exts = [];
+      document.querySelectorAll('#ext-pills .filter-pill.active').forEach(p => exts.push(p.getAttribute('data-ext')));
+      activeFilters.extensions = exts;
+
+      const activeDate = document.querySelector('#date-pills .filter-pill.active');
+      activeFilters.days = activeDate ? activeDate.getAttribute('data-days') : 'all';
+
+      const activeSort = document.querySelector('#sort-pills .filter-pill.active');
+      activeFilters.sort = activeSort ? activeSort.getAttribute('data-sort') : 'relevance';
+
+      const badgeCount = (exts.length > 0 ? 1 : 0) + (activeFilters.days !== 'all' ? 1 : 0) + (activeFilters.sort !== 'relevance' ? 1 : 0);
+      const badge = document.getElementById('filter-badge');
+      if (badgeCount > 0) {
+        badge.innerText = badgeCount;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+
+      toggleFilterModal(false);
+      executeSearch(document.getElementById('search-input').value);
+    }
+
+    function resetFilters() {
+      document.querySelectorAll('#ext-pills .filter-pill').forEach(p => p.classList.remove('active'));
+      selectSinglePill(document.querySelector('#date-pills .filter-pill[data-days="all"]'), 'date-pills');
+      selectSinglePill(document.querySelector('#sort-pills .filter-pill[data-sort="relevance"]'), 'sort-pills');
+      applyFilters();
+    }
+
+    function simulateScan() {
+      alert('Scanning photo gallery... Discovered 10 local images. Vector embeddings are up-to-date.');
+    }
+
+    // Initialize initial render
+    executeSearch('');
+    renderGrid('gallery-grid', GALLERY, false);
+  </script>
+</body>
+</html>

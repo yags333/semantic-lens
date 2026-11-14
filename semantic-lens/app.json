@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "SemanticLens",
+    "slug": "semantic-lens",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
+    "assetBundlePatterns": [
+      "**/*",
+      "assets/models/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ai.localmedia.semanticlens",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "SemanticLens processes your photos entirely on-device to build a private local semantic vector index for natural language search without uploading any media to the cloud.",
+        "NSPhotoLibraryAddUsageDescription": "SemanticLens requires access to save indexed search media."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0f172a"
+      },
+      "package": "ai.localmedia.semanticlens",
+      "permissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_MEDIA_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow SemanticLens to index photos locally using on-device AI.",
+          "savePhotosPermission": "Allow SemanticLens to save photos."
+        }
+      ]
+    ]
+  }
+}
