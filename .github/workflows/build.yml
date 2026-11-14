@@ -9,13 +9,8 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Unzip project
-        run: |
-          unzip -o semantic-lens.zip
-          mv semantic-lens/* . 2>/dev/null || true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -31,8 +26,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Move files from subfolder
+        run: |
+          if [ -d "semantic-lens" ]; then
+            cp -r semantic-lens/* . 2>/dev/null || true
+            cp -r semantic-lens/.* . 2>/dev/null || true
+          fi
+
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Prebuild native Android project
         run: npx expo prebuild --platform android --clean
@@ -47,4 +49,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SemanticLens-SamsungGalaxy.apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/release/*.apk
