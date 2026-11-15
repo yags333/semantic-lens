@@ -26,13 +26,20 @@ jobs:
 
           mkdir -p android/app/src/main/java/ai/localmedia/semanticlens
           mkdir -p android/app/src/main/assets
+          mkdir -p android/app/src/main/res/values
 
           find . -name "index.html" -exec cp {} android/app/src/main/assets/index.html \; -quit
 
-          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          cat << 'EOM' > android/app/src/main/res/values/strings.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="ai.localmedia.semanticlens">
+          <resources>
+              <string name="app_name">SemanticLens</string>
+          </resources>
+          EOM
+
+          cat << 'EOM' > android/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
               <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
@@ -40,9 +47,9 @@ jobs:
                   android:allowBackup="false"
                   android:icon="@android:drawable/sym_def_app_icon"
                   android:label="SemanticLens"
-                  android:theme="@style/Theme.AppCompat.NoActionBar">
+                  android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
                   <activity
-                      android:name=".MainActivity"
+                      android:name="ai.localmedia.semanticlens.MainActivity"
                       android:exported="true"
                       android:configChanges="orientation|screenSize|keyboardHidden">
                       <intent-filter>
@@ -52,9 +59,9 @@ jobs:
                   </activity>
               </application>
           </manifest>
-          EOF
+          EOM
 
-          cat << 'EOF' > android/app/src/main/java/ai/localmedia/semanticlens/MainActivity.java
+          cat << 'EOM' > android/app/src/main/java/ai/localmedia/semanticlens/MainActivity.java
           package ai.localmedia.semanticlens;
           import android.Manifest;
           import android.content.pm.PackageManager;
@@ -62,22 +69,20 @@ jobs:
           import android.os.Bundle;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
-          import androidx.appcompat.app.AppCompatActivity;
-          import androidx.core.app.ActivityCompat;
-          import androidx.core.content.ContextCompat;
+          import android.app.Activity;
 
-          public class MainActivity extends AppCompatActivity {
+          public class MainActivity extends Activity {
               private WebView webView;
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                      if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
-                          ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_MEDIA_IMAGES}, 101);
+                      if (checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                          requestPermissions(new String[]{Manifest.permission.READ_MEDIA_IMAGES}, 101);
                       }
-                  } else {
-                      if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                          ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 101);
+                  } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                      if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                          requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 101);
                       }
                   }
                   webView = new WebView(this);
@@ -93,12 +98,16 @@ jobs:
               }
               @Override
               public void onBackPressed() {
-                  if (webView.canGoBack()) { webView.goBack(); } else { super.onBackPressed(); }
+                  if (webView != null && webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
               }
           }
-          EOF
+          EOM
 
-          cat << 'EOF' > android/build.gradle
+          cat << 'EOM' > android/build.gradle
           buildscript {
               repositories { google(); mavenCentral() }
               dependencies { classpath "com.android.tools.build:gradle:8.2.1" }
@@ -106,14 +115,14 @@ jobs:
           allprojects {
               repositories { google(); mavenCentral() }
           }
-          EOF
+          EOM
 
-          cat << 'EOF' > android/settings.gradle
+          cat << 'EOM' > android/settings.gradle
           rootProject.name = 'SemanticLens'
           include ':app'
-          EOF
+          EOM
 
-          cat << 'EOF' > android/app/build.gradle
+          cat << 'EOM' > android/app/build.gradle
           plugins { id 'com.android.application' }
           android {
               namespace 'ai.localmedia.semanticlens'
@@ -130,11 +139,7 @@ jobs:
                   debug { debuggable true }
               }
           }
-          dependencies {
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'androidx.webkit:webkit:1.9.0'
-          }
-          EOF
+          EOM
 
           cd android
           gradle wrapper --gradle-version 8.2.1 || true
