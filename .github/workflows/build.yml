@@ -12,41 +12,46 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Setup Java JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-      - name: Move files from subfolder
+      - name: Organize Files
         run: |
+          # If files are inside semantic-lens folder, bring them to top
           if [ -d "semantic-lens" ]; then
-            cp -r semantic-lens/* . 2>/dev/null || true
-            cp -r semantic-lens/.* . 2>/dev/null || true
+            cp -rn semantic-lens/* . 2>/dev/null || true
+            cp -rn semantic-lens/.* . 2>/dev/null || true
+          fi
+          # If a zip file was uploaded, unzip it
+          if [ -f "semantic-lens.zip" ]; then
+            unzip -o semantic-lens.zip
+            cp -rn semantic-lens/* . 2>/dev/null || true
           fi
 
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Prebuild native Android project
-        run: npx expo prebuild --platform android --clean
-
-      - name: Build Android Release APK
+      - name: Create Gradle Wrapper
         run: |
           cd android
+          if [ ! -f "gradlew" ]; then
+            echo "Generating Gradle wrapper..."
+            gradle wrapper --gradle-version 8.2.1 || gradle wrapper
+          fi
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK
+      - name: Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK for Samsung Galaxy
         uses: actions/upload-artifact@v4
         with:
           name: SemanticLens-SamsungGalaxy.apk
-          path: android/app/build/outputs/apk/release/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
